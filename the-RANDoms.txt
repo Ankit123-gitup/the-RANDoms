@@ -10,6 +10,18 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 #include <ESPmDNS.h>
+#include <FirebaseESP32.h>
+#include  <WiFi.h>
+#include "DHT.h"
+
+//#define FIREBASE_HOST "go-mine-85a32-default-rtdb.firebaseio.com"
+//#define FIREBASE_Authorization_key "0ZHoDg8x3hLdjG2pyvb3ntaUStuLV1OPA7bWazOA"
+
+#define FIREBASE_HOST "go-mine-85a32-default-rtdb.firebaseio.com"
+#define WIFI_SSID "Redmi" // Change the name of your WIFI
+#define WIFI_PASSWORD "12345678" // Change the password of your WIFI
+#define FIREBASE_Authorization_key "0ZHoDg8x3hLdjG2pyvb3ntaUStuLV1OPA7bWazOA"
+
 
 const int trigPin = 5;
 const int echoPin = 18;
@@ -17,13 +29,18 @@ const int echoPin = 18;
 long duration;
 float distanceCm;
 
+
+
 // Replace with your network credentials
-const char* ssid = "Redmi";
-const char* password = "12345678";
+//const char* ssid = "Redmi";
+//const char* password = "12345678";
 
 #define DHTTYPE DHT11
 #define DHTPIN 27
 #define ONE_WIRE_BUS 4
+
+FirebaseData firebaseData;
+FirebaseJson json;
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
@@ -33,7 +50,7 @@ unsigned long lastTime = 0;
 unsigned long timerDelay = 30000;
 DHT dht(DHTPIN, DHTTYPE);
 
-// Create AsyncWebServer object on port 80
+
 AsyncWebServer server(80);
 
 String readDHTTemperature() {
@@ -45,7 +62,10 @@ String readDHTTemperature() {
     return "--";
   }
   else {
+    Serial.print("Mine Temperature: ");
     Serial.println(t);
+    Firebase.setFloat(firebaseData, "/ESP32_APP/TEMPERATURE", t);
+    delay(200);
     return String(t);
   }
 }
@@ -60,7 +80,10 @@ String readDHTHumidity() {
     return "--";
   }
   else {
+    Serial.print("Mine Humidity: ");
     Serial.println(h);
+    Firebase.setFloat(firebaseData, "/ESP32_APP/HUMIDITY", h);
+    delay(200);
     return String(h);
   }
 }
@@ -74,8 +97,10 @@ String readDSTemperatureC() {
     Serial.println("Failed to read from DS18B20 sensor");
     return "--";
   } else {
-    Serial.print("Temperature Celsius: ");
+    Serial.print("Body Temperature Celsius: ");
     Serial.println(tempC); 
+    Firebase.setFloat(firebaseData, "/ESP32_APP/BODY TEMPERATURE in C", tempC);
+    delay(200);
   }
   return String(tempC);
 }
@@ -89,8 +114,10 @@ String readDSTemperatureF() {
     Serial.println("Failed to read from DS18B20 sensor");
     return "--";
   } else {
-    Serial.print("Temperature Fahrenheit: ");
+    Serial.print("Body Temperature Fahrenheit: ");
     Serial.println(tempF);
+    Firebase.setFloat(firebaseData, "/ESP32_APP/BODY TEMPERATURE in F", tempF);
+    delay(200);
   }
   return String(tempF);
 }
@@ -103,8 +130,10 @@ String readDistance(){
   duration = pulseIn(echoPin, HIGH);
   
   distanceCm = duration * SOUND_SPEED/2;
-  Serial.println("Distance:");
-Serial.println(distanceCm);
+  Serial.println("Water Level:");
+  Serial.println(distanceCm);
+   Firebase.setFloat(firebaseData, "/ESP32_APP/WATER LEVEL in cm", distanceCm);
+    delay(200);
    return String(distanceCm);
    
 }
@@ -119,11 +148,13 @@ const char index_html[] PROGMEM = R"rawliteral(
      font-family: Arial;
      display: inline-block;
      margin: 0px auto;
-     text-align: center;
     }
     h2 { font-size: 3.0rem; }
     p { font-size: 3.0rem; }
     .units { font-size: 1.2rem; }
+    h2 {padding-left: 50px; }
+    p {padding-left: 50px; }
+    
     .dht-labels{
       font-size: 1.5rem;
       vertical-align:middle;
@@ -132,37 +163,42 @@ const char index_html[] PROGMEM = R"rawliteral(
   </style>
 </head>
 <body>
-  <h2>WORKER HEALTH ANALYSIS</h2>
+  <h2>WORKER HEALTH ANALYSIS<HR></h2>
   <p>
     <i class="fas fa-thermometer-half" style="color:#059e8a;"></i> 
-    <span class="dht-labels">Temperature</span> 
+    <span class="dht-labels">Mine Temperature<br></span> 
     <span id="temperature">%TEMPERATURE%</span>
-    <sup class="units">&deg;C</sup>
+    <sup class="units">&deg;C</br></sup>
   </p>
+  <HR>
   <p>
     <i class="fas fa-tint" style="color:#00add6;"></i> 
-    <span class="dht-labels">Humidity</span>
+    <span class="dht-labels">Mine Humidity<br></span>
     <span id="humidity">%HUMIDITY%</span>
-    <sup class="units">&percnt;</sup>
+    <sup class="units">&percnt;</br></sup>
   </p>
+  <HR>
   <p>
     <i class="fas fa-thermometer-half" style="color:#059e8a;"></i> 
-    <span class="ds-labels">Temperature Celsius</span> 
+    <span class="dht-labels">Body Temperature<br></span> 
     <span id="temperaturec">%TEMPERATUREC%</span>
-    <sup class="units">&deg;C</sup>
+    <sup class="units">&deg;C</br></sup>
   </p>
+  <HR>
   <p>
     <i class="fas fa-thermometer-half" style="color:#059e8a;"></i> 
-    <span class="ds-labels">Temperature Fahrenheit</span>
+    <span class="dht-labels">Body Temperature<br></span>
     <span id="temperaturef">%TEMPERATUREF%</span>
-    <sup class="units">&deg;F</sup>
+    <sup class="units">&deg;F</br></sup>
   </p>
+  <HR>
   <p>
-   <i class="fa fa-road" style="color:#00add6;"></i> 
-    <span class="dht-labels">Distance</span> 
+   <i class="fas fa-road" style="color:#00add6;"></i> 
+    <span class="dht-labels">Water Level<br></span> 
     <span id="Distance">%DISTANCE%</span>
-    <sup class="units">Cm</sup>
+    <sup class="units">Cm</br></sup>
   </p>
+  <HR>
 </body>
 <script>
 setInterval(function ( ) {
@@ -210,9 +246,8 @@ setInterval(function ( ) {
 </script>
 </html>)rawliteral";
 
-// Replaces placeholder with DHT values
 String processor(const String& var){
-  //Serial.println(var);
+  Serial.println(var);
   if(var == "TEMPERATURE"){
     return readDHTTemperature();
   }
@@ -239,6 +274,9 @@ void setup(){
   dht.begin();
   sensors.begin();
 
+   Serial.println();
+   Firebase.begin(FIREBASE_HOST,FIREBASE_Authorization_key);
+
   temperatureC = readDSTemperatureC();
   temperatureF = readDSTemperatureF();
 
@@ -246,7 +284,7 @@ void setup(){
   pinMode(echoPin, INPUT);
   
   // Connect to Wi-Fi
-  WiFi.begin(ssid, password);
+  WiFi.begin (WIFI_SSID, WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
     Serial.println("Connecting to WiFi..");
@@ -261,7 +299,7 @@ void setup(){
 
     Serial.println(WiFi.localIP());
 
-  // Route for root / web page
+
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send_P(200, "text/html", index_html, processor);
   });
@@ -284,6 +322,7 @@ void setup(){
   // Start server
   server.begin();
 }
+
  
 void loop(){
   if ((millis() - lastTime) > timerDelay) {
@@ -291,4 +330,5 @@ void loop(){
     temperatureF = readDSTemperatureF();
     lastTime = millis();
   }  
+
 }
