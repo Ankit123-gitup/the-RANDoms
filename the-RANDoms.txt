@@ -18,26 +18,20 @@
 //#define FIREBASE_Authorization_key "0ZHoDg8x3hLdjG2pyvb3ntaUStuLV1OPA7bWazOA"
 
 #define FIREBASE_HOST "go-mine-85a32-default-rtdb.firebaseio.com"
-#define WIFI_SSID "Redmi" // Change the name of your WIFI
-#define WIFI_PASSWORD "12345678" // Change the password of your WIFI
+//#define WIFI_SSID "Redmi" // Change the name of your WIFI
+//#define WIFI_PASSWORD "12345678" // Change the password of your WIFI
 #define FIREBASE_Authorization_key "0ZHoDg8x3hLdjG2pyvb3ntaUStuLV1OPA7bWazOA"
 
 
-const int trigPin = 5;
-const int echoPin = 18;
-#define SOUND_SPEED 0.034
-long duration;
-float distanceCm;
 
 
-
-// Replace with your network credentials
-//const char* ssid = "Redmi";
-//const char* password = "12345678";
+const char* ssid = "Redmi";
+const char* password = "12345678";
 
 #define DHTTYPE DHT11
 #define DHTPIN 27
 #define ONE_WIRE_BUS 4
+#define SOUND_SPEED 0.034
 
 FirebaseData firebaseData;
 FirebaseJson json;
@@ -49,6 +43,10 @@ String temperatureC = "";
 unsigned long lastTime = 0;  
 unsigned long timerDelay = 30000;
 DHT dht(DHTPIN, DHTTYPE);
+const int trigPin = 5;
+const int echoPin = 18;
+long duration;
+float distanceCm;
 
 
 AsyncWebServer server(80);
@@ -66,8 +64,9 @@ String readDHTTemperature() {
     Serial.println(t);
     Firebase.setFloat(firebaseData, "/ESP32_APP/TEMPERATURE", t);
     delay(200);
-    return String(t);
   }
+    return String(t);
+  
 }
 
 
@@ -84,8 +83,9 @@ String readDHTHumidity() {
     Serial.println(h);
     Firebase.setFloat(firebaseData, "/ESP32_APP/HUMIDITY", h);
     delay(200);
-    return String(h);
   }
+    return String(h);
+  
 }
 
 String readDSTemperatureC() {
@@ -165,7 +165,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 <body>
   <h2>WORKER HEALTH ANALYSIS<HR></h2>
   <p>
-    <i class="fas fa-thermometer-half" style="color:#059e8a;"></i> 
+    <i class="fas fa-temperature-high" style="color:#059e8a;"></i> 
     <span class="dht-labels">Mine Temperature<br></span> 
     <span id="temperature">%TEMPERATURE%</span>
     <sup class="units">&deg;C</br></sup>
@@ -179,7 +179,7 @@ const char index_html[] PROGMEM = R"rawliteral(
   </p>
   <HR>
   <p>
-    <i class="fas fa-thermometer-half" style="color:#059e8a;"></i> 
+    <i class="fas fa-thermometer-half" style="color:#98f5e8;"></i> 
     <span class="dht-labels">Body Temperature<br></span> 
     <span id="temperaturec">%TEMPERATUREC%</span>
     <sup class="units">&deg;C</br></sup>
@@ -193,12 +193,32 @@ const char index_html[] PROGMEM = R"rawliteral(
   </p>
   <HR>
   <p>
-   <i class="fas fa-road" style="color:#00add6;"></i> 
+   <i class="fas fa-road" style="color:#0c42ae;"></i> 
     <span class="dht-labels">Water Level<br></span> 
     <span id="Distance">%DISTANCE%</span>
-    <sup class="units">Cm</br></sup>
+    <sup class="units">cm</br></sup>
   </p>
   <HR>
+  <p>
+    <i class="fas fa-gas-pump" style="color: #059e8a;"></i>
+    <span class="dht-labels">Gas Detection<br></span> 
+    <span id="Range">--</span>
+  </p>
+  <hr>
+  <p>
+    <i class="fas fa-heartbeat" style="color:rgb(245, 16, 16);"></i>
+    <span class="dht-labels">Heart Rate<br></span> 
+    <span id="bpm">--</span>
+    <sup class="units">bpm</br></sup>
+  </p>
+  <hr>
+  <p>
+    <i class="fa fa-percent" style="color:rgb(57, 191, 235);"></i>
+    <span class="dht-labels">SPO2<br></span> 
+    <span id="Percentage">--</span>
+    <sup class="units">&percnt;</br></sup>
+  </p>
+  <hr>
 </body>
 <script>
 setInterval(function ( ) {
@@ -284,7 +304,7 @@ void setup(){
   pinMode(echoPin, INPUT);
   
   // Connect to Wi-Fi
-  WiFi.begin (WIFI_SSID, WIFI_PASSWORD);
+  WiFi.begin (ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
     Serial.println("Connecting to WiFi..");
